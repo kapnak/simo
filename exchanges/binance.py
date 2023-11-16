@@ -1,9 +1,21 @@
 import logging
 import math
 from binance.spot import Spot
+from binance.error import ClientError
 
 from .exchange import Exchange
 from .safe_operators import *
+
+
+def retry(func):
+    def wrapper(*args, **kwargs):
+        try:
+            return func(*args, **kwargs)
+        except ClientError as err:
+            logging.error(err)
+            logging.error('Retrying ...')
+            wrapper(*args, **kwargs)
+    return wrapper
 
 
 class Binance(Exchange):
@@ -19,6 +31,7 @@ class Binance(Exchange):
         self._price_tick_size = 100   # Tick size of BTCFDUSD 0.01000000
         self._lot_step_size = 100000  # Step size of BTCFDUSD 0.00010000
 
+    @retry
     def buy_max_market(self) -> float:
         order = self.client.new_order(symbol=self.symbol_pair,
                                       side='BUY',
@@ -38,6 +51,7 @@ class Binance(Exchange):
             logging.warning(f'Commissions are not null : {commission} !')
         return total
 
+    @retry
     def sell_max_limit(self, price: float):
         """
         Place a sell limit order.
@@ -50,6 +64,7 @@ class Binance(Exchange):
                               quantity=float_to_str(divide(math.trunc(self.get_balance(self.asset_bitcoin) * self._lot_step_size), self._lot_step_size)),
                               timeInForce='GTC')
 
+    @retry
     def get_open_price(self) -> float:
         """
         Get the last 1H candle open price.
@@ -59,6 +74,7 @@ class Binance(Exchange):
         logging.info(f'Open price is {open_price}')
         return open_price
 
+    @retry
     def cancel_orders(self):
         """
         Cancel all orders on bitcoin.
@@ -69,6 +85,7 @@ class Binance(Exchange):
         for order in orders:
             self.client.cancel_order(symbol=self.symbol_pair, orderId=order['orderId'])
 
+    @retry
     def get_balance(self, balance_type: str) -> float:
         if balance_type is self.asset_stable:
             balance = float(self.client.user_asset(asset=self.symbol_stable)[0]['free'])
