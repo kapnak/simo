@@ -1,5 +1,6 @@
 import logging
 import math
+import time
 from binance.spot import Spot
 from binance.error import ClientError
 
@@ -9,12 +10,13 @@ from .safe_operators import *
 
 def retry(func):
     def wrapper(*args, **kwargs):
-        try:
-            return func(*args, **kwargs)
-        except ClientError as err:
-            logging.error(err)
-            logging.error('Retrying ...')
-            wrapper(*args, **kwargs)
+        while 1:
+            try:
+                return func(*args, **kwargs)
+            except ClientError as err:
+                logging.error(err)
+                logging.error('Retrying ...')
+                time.sleep(1)
     return wrapper
 
 
