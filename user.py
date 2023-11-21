@@ -8,7 +8,7 @@ import exchanges
 from exchanges import safe_operators
 
 USER_DIR = 'data/user/'
-HN = 1.0025
+HN = 1.0027
 
 
 def start(name):
